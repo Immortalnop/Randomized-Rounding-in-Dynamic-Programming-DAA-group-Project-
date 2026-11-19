@@ -1,0 +1,129 @@
+\section{Proof of Correctness}\label{sec:proof}
+Throughout, $c\in\Z_{\ge0}^{m\times K}$ with $\min_vc_j(v)=0$, $T=C(k^\star)$, $t^\star=\floor{T/D}$,
+$\rho(k)=\sum_jr_j(k_j)$, $S(t)=\{k:\rho(k)\le t\}$ and $N(t)=|S(t)|$ (and $\tilde\rho,\tilde S,\tilde N$ for stochastic rounding).
+
+\subsection{Rounding errors and the certified sandwich (RQ1)}
+\begin{lemma}[Per-entry error]\label{lem:err}
+For every $j,v$: floor gives $0\le c_j(v)-D r_j(v)\le D-1$. Stochastic rounding gives
+$-(D-1)\le D\rt_j(v)-c_j(v)\le D-1$. Summing over the $m$ coordinates,
+\[ D\rho(k)\le C(k)\le D\rho(k)+m(D-1),\qquad |D\tilde\rho(k)-C(k)|\le m(D-1). \]
+\end{lemma}
+\begin{proof}
+Write $c=Dq+s$ with $0\le s\le D-1$. Floor: $c-Dq=s$. Stochastic: $\floor{(Dq+s+U)/D}=q+\ind[U\ge D-s]$
+because $0\le s+U\le 2D-2$, so $D\rt-c\in\{-s,\,D-s\}$. If $s=0$ the second value is impossible
+($U\le D-1$), so $D\rt-c\in[-(D-1),D-1]$.
+\end{proof}
+
+\begin{lemma}[Sandwich]\label{lem:sandwich}
+Floor: $N(t^\star-m)\le R\le N(t^\star)$. Stochastic:
+$\tilde N(t^\star-m)\le R\le\tilde N(\floor{(T+m(D-1))/D})$. Both hold \emph{deterministically}.
+\end{lemma}
+\begin{proof}
+\emph{Upper (floor).} If $k\in A$ then $D\rho(k)\le C(k)\le T$. Since $\rho$ is an integer, $\rho(k)\le t^\star$, so $A\subseteq S(t^\star)$.
+\emph{Lower (floor).} If $\rho(k)\le t^\star-m$ then $C(k)\le D(t^\star-m)+m(D-1)=Dt^\star-m<T$, so $k\in A$.
+\emph{Stochastic.} By Lemma~\ref{lem:err}, $k\in A$ implies $D\tilde\rho(k)\le T+m(D-1)$. Conversely, $\tilde\rho(k)\le t^\star-m$ implies $C(k)\le D\tilde\rho(k)+m(D-1)<T$. Both arguments go through as in the floor case.
+\end{proof}
+
+\subsection{The DP and the sampler}
+\begin{lemma}[DP correctness]\label{lem:dp}
+$F_j(t)=|\{(k_j,\dots,k_m):\sum_{i\ge j}r_i(k_i)\le t\}|$ for all $j$ and all $t\le t_{\max}$. In particular $N(t)=F_1(t)$.
+\end{lemma}
+\begin{proof}
+Backward induction on $j$. The base case $F_{m+1}(t)=\ind[t\ge0]$ counts the empty suffix.
+For the step, partition the suffixes by $k_j=v$. Those with $k_j=v$ must satisfy $\sum_{i>j}r_i(k_i)\le t-r_j(v)$,
+and by induction there are $F_{j+1}(t-r_j(v))$ of them. Because $r\ge0$, all arguments are
+$\le t\le t_{\max}$, and negative arguments give $0$, so the truncated table is exact.
+\end{proof}
+
+\begin{lemma}[Exact uniform sampling]\label{lem:sampler}
+If $N(t_0)>0$, the sampler returns each $k\in S(t_0)$ with probability exactly $1/N(t_0)$ and never returns $k\notin S(t_0)$.
+\end{lemma}
+\begin{proof}
+At step $j$ with remaining budget $t_j$, the normalizer is $\sum_vF_{j+1}(t_j-r_j(v))=F_j(t_j)$ by
+\eqref{eq:dp}. A value $v$ can only be chosen if $F_{j+1}(t_j-r_j(v))>0$, so every reached state has $F_j(t_j)>0$.
+For $k\in S(t_0)$ with budgets $t_{j+1}=t_j-r_j(k_j)$, the probabilities telescope:
+\[\Pr[k]=\prod_{j=1}^m\frac{F_{j+1}(t_{j+1})}{F_j(t_j)}=\frac{F_{m+1}(t_{m+1})}{F_1(t_0)}=\frac{1}{N(t_0)},\]
+since $t_{m+1}=t_0-\rho(k)\ge0$. If $k\notin S(t_0)$ then $t_{m+1}<0$ and some factor is $0$.
+\end{proof}
+
+\subsection{Unbiased $(1\pm\eps)$ estimation with floor rounding (RQ2)}
+\begin{lemma}[Dyer-type a-priori bound]\label{lem:dyer}
+Let $m\ge2$ and $D\le T/(m(m-1))$. Then $|S(t^\star)|\le\big(m(K-1)+1\big)\,R$.
+\end{lemma}
+\begin{proof}
+Take $k\in S(t^\star)\setminus A$. By Lemma~\ref{lem:err}, $C(k)\le Dt^\star+m(D-1)<T+mD$.
+Let $j^\star$ be the coordinate of maximum cost (ties to the smallest index), so $c_{j^\star}(k_{j^\star})\ge C(k)/m$.
+Define $\phi(k)$ by replacing $k_{j^\star}$ with a zero-cost candidate $v^0_{j^\star}$. Then
+\[ C(\phi(k))\le\Big(1-\tfrac1m\Big)C(k)<\Big(1-\tfrac1m\Big)(T+mD)=T+D(m-1)-\tfrac Tm\le T, \]
+where the last step uses $D(m-1)\le T/m$. So $\phi(k)\in A$. Given $k'=\phi(k)$, the preimage $k$ is fixed by
+choosing $j^\star$ ($m$ ways) and $k_{j^\star}\neq v^0_{j^\star}$ ($K-1$ ways; equality would give
+$k=k'\in A$). Hence $|S(t^\star)\setminus A|\le m(K-1)|A|$, and since $A\subseteq S(t^\star)$ the claim follows.
+For $K=2$ this is exactly Dyer's bound $|S'|\le(n+1)|S|$~\cite{dyer2003}.
+\end{proof}
+
+\begin{theorem}[Floor estimator]\label{thm:floor}
+With floor rounding and $t_0=t^\star$, let $p=R/N(t^\star)$ and let $p_{\mathrm{lo}}\le p$ be the value
+computed in Algorithm~\ref{alg:rrdp}. For $n\ge3\ln(2/\delta)/(\eps^2p_{\mathrm{lo}})$:
+\begin{enumerate}[nosep]
+\item $\E[\hat R]=R$ (unbiased);
+\item $\Pr\big[|\hat R-R|>\eps R\big]\le\delta$.
+\end{enumerate}
+\end{theorem}
+\begin{proof}
+$p_{\mathrm{lo}}\le p$: the ratio $N(t^\star-m)/N(t^\star)\le R/N(t^\star)$ by Lemma~\ref{lem:sandwich}, and $1/(m(K-1)+1)\le p$ by
+Lemma~\ref{lem:dyer} whenever its condition holds. By Lemma~\ref{lem:sampler} and $A\subseteq S(t^\star)$, each sample is accepted
+independently with probability $p$, so $X\sim\mathrm{Bin}(n,p)$ and $\E[\hat R]=N(t^\star)\,np/n=R$.
+The multiplicative Chernoff bound for $\eps\in(0,1)$ gives
+$\Pr[|X-np|>\eps np]\le2\exp(-\eps^2np/3)\le2\exp(-\eps^2np_{\mathrm{lo}}/3)\le\delta$.
+Finally, $|X-np|\le\eps np$ is equivalent to $|\hat R-R|\le\eps R$.
+\end{proof}
+
+\begin{corollary}[FPRAS for key rank]\label{cor:fpras}
+With $D=\max(1,\floor{T/(m(m-1))})$, Algorithm~\ref{alg:rrdp} (floor mode) solves Problem~\ref{prob:main}
+in time $O\big(m^3K+m^2K^2\eps^{-2}\log\delta^{-1}\big)$, independent of the magnitude of $c$.
+If $D=1$ there is no rounding and $N(t^\star)=R$ exactly.
+\end{corollary}
+\begin{proof}
+If $D>1$ then $D\le T/(m(m-1))$, so Lemma~\ref{lem:dyer} applies, $p_{\mathrm{lo}}\ge1/(m(K-1)+1)$, and Theorem~\ref{thm:floor} gives
+correctness. Also $t^\star=\floor{T/D}<2m(m-1)$, because $D>T/(m(m-1))-1\ge T/(2m(m-1))$ when $T/(m(m-1))\ge2$.
+Timing is in Section~\ref{sec:complexity}.
+\end{proof}
+
+\subsection{Stochastic rounding of the inputs (RQ3)}
+\begin{lemma}[Unbiased, concentrated]\label{lem:stoch}
+$\E[D\rt_j(v)]=c_j(v)$. For any \emph{fixed} key $k$ and $\tau>0$,
+$\Pr\big[D\tilde\rho(k)-C(k)>\tau\big]\le\exp\!\big(-2\tau^2/(mD^2)\big)$.
+With $\tau=D\sqrt{m\ln(1/\eta)/2}$ this is at most $\eta$.
+\end{lemma}
+\begin{proof}
+From Lemma~\ref{lem:err}, $\Pr[\text{round up}]=\Pr[U\ge D-s]=s/D$, so $\E[D\rt]=Dq+s=c$. For fixed $k$ the errors
+$e_j=D\rt_j(k_j)-c_j(k_j)$ depend only on $U_j$, so they are independent across $j$. Each has mean $0$ and lies in $\{-s_j,D-s_j\}$,
+an interval of length $D$. Hoeffding's inequality~\cite{hoeffding1963} gives the bound.
+\end{proof}
+Under floor rounding the error is \emph{always} one-signed and averages about $mD/2$, whereas here
+it is $O(D\sqrt{m\log(1/\eta)})$. The price is that containment $A\subseteq\tilde S(t_0)$ now holds only
+for most keys.
+
+\begin{theorem}[Stochastic estimator]\label{thm:stoch}
+In stochastic mode, let $S'=\tilde S(t_0)$ and $p'=|A\cap S'|/|S'|$. For $\delta_1,\delta_2\in(0,1)$ and
+$n\ge3\ln(2/\delta_2)/(\eps^2p_{\mathrm{lo}})$, with probability at least $1-\delta_1-\delta_2$:
+\[ (1-\eps)\Big(1-\frac{\eta}{\delta_1}\Big)R\;\le\;\hat R\;\le\;(1+\eps)R. \]
+Moreover $(1-\eta)R\le\E[\hat R]\le R$.
+\end{theorem}
+\begin{proof}
+\emph{Miss mass.} Let $M=|A\setminus S'|$. If $t_0=t_{\mathrm{up}}$ then $M=0$ by Lemma~\ref{lem:sandwich}.
+Otherwise, if $k\in A\setminus S'$ then $\tilde\rho(k)\ge t_0+1>(T+\tau)/D$, so $D\tilde\rho(k)-C(k)>\tau$.
+By Lemma~\ref{lem:stoch} each $k\in A$ is missed with probability at most $\eta$, so $\E[M]\le\eta R$ by linearity.
+Markov's inequality gives $\Pr[M\ge(\eta/\delta_1)R]\le\delta_1$.
+\emph{Sampling.} Condition on the rounding. $\tilde S(t^\star-m)\subseteq A\cap S'$ (Lemma~\ref{lem:sandwich}, $t^\star-m\le t_0$),
+so $p'\ge p_{\mathrm{lo}}$. Exactly as in Theorem~\ref{thm:floor}, $(1-\eps)|A\cap S'|\le\hat R\le(1+\eps)|A\cap S'|$ except with probability $\delta_2$,
+and $\E[\hat R\mid\text{rounding}]=|A\cap S'|=R-M$. A union bound over the two failure events and
+$R-M\in[(1-\eta/\delta_1)R,\,R]$ complete the proof. For the expectation, $\E[R-M]\ge(1-\eta)R$.
+\end{proof}
+
+\paragraph{Empirical confirmation.} \texttt{test\_rrdp.py} checks every statement above against brute force:
+Lemma~\ref{lem:dp} (exact equality, 30 instances), Lemma~\ref{lem:sandwich} (400/400 instances,
+both modes), Lemma~\ref{lem:sampler} ($\chi^2$ uniformity test, $z\approx0.4$), Lemma~\ref{lem:dyer} (300/300,
+including heavy-tailed costs; at most $45\%$ of the bound was used), Theorem~\ref{thm:floor} (300 runs,
+mean within one standard error of $R$, zero failures at $\eps=\delta=0.1$), Lemma~\ref{lem:stoch} (tail
+$0.0013\le\eta=0.05$) and Theorem~\ref{thm:stoch} (zero failures).

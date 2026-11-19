@@ -1,0 +1,50 @@
+\section{Complexity Analysis}\label{sec:complexity}
+Let $W=t_{\mathrm{up}}+1\approx T/D$ be the DP width and $n$ the number of samples.
+
+\begin{table}[h]\centering\small
+\resizebox{\linewidth}{!}{\begin{tabular}{@{}lll@{}}
+\toprule
+Step & Time & Memory \\ \midrule
+Row shift, rounding, histograms & $O(mK)$ & $O(mK)$ \\
+DP \eqref{eq:dp}: $m$ layers $\times$ $\le\min(K,W)$ taps $\times$ $W$ & $O(m\,K\,W)$ & $O(mW)$ (all layers kept for sampling) \\
+One exact uniform sample & $O(mK)$ ($O(m\log K)$ with per-row prefix trees) & $O(m)$ \\
+Acceptance test & $O(m)$ per sample & -- \\
+$n=\ceil{3\ln(2/\delta)/(\eps^2p_{\mathrm{lo}})}$ samples & $O\big(mK\,\eps^{-2}p_{\mathrm{lo}}^{-1}\log\delta^{-1}\big)$ & $O(m)$ streaming \\ \midrule
+\textbf{Total} & $O\big(mKW+mK\eps^{-2}p_{\mathrm{lo}}^{-1}\log\delta^{-1}\big)$ & $O(mW+mK)$ \\ \bottomrule
+\end{tabular}}
+\caption{Cost of \textsc{RRDP-Rank}.}\label{tab:cost}
+\end{table}
+
+\paragraph{Worst-case (FPRAS) setting.} With the grid of Corollary~\ref{cor:fpras}, $W<2m(m-1)+1=O(m^2)$ and
+$p_{\mathrm{lo}}\ge1/(m(K-1)+1)$, so
+\[ \text{time}=O\big(m^3K+m^2K^2\eps^{-2}\log\delta^{-1}\big),\qquad \text{memory}=O(m^3+mK), \]
+which is polynomial and independent of the bit-length of the scores. For $K=2$ this is
+$O(n^3+n^2\eps^{-2}\log\delta^{-1})$, matching the basic version of Dyer~\cite{dyer2003}.
+
+\paragraph{The rounding trade-off.} $W$ and $p_{\mathrm{lo}}$ pull in opposite directions. A coarse grid
+(small $W$) gives a cheap DP but a wide band of $m$ grid cells between $t^\star-m$ and $t^\star$, hence a small $p$
+and many samples. Suppose that, over the relevant range, each grid cell multiplies the count by at most
+$\gamma$, i.e.\ $N(t)\le\gamma N(t-1)$. Then $p_{\mathrm{lo}}\ge\gamma^{-m}$, and refining the grid drives $\gamma\to1$.
+Stochastic rounding replaces the $m$-cell band by about $\sqrt{m\ln(1/\eta)/2}$ cells (Lemma~\ref{lem:stoch}), so in the
+exponent $m$ becomes $O(\sqrt{m})$. This is why its advantage grows with $m$ (Table~\ref{tab:scaling}).
+
+\paragraph{Comparison.}
+\begin{center}\small
+\resizebox{\linewidth}{!}{\begin{tabular}{@{}lll@{}}
+\toprule
+Method & Time & Output \\ \midrule
+Enumeration & $\Theta(K^m)$ ($2^{128}$ for AES) & exact \\
+Exact DP on integer costs & $O(mK\cdot T)$, pseudo-polynomial ($T\sim2^{30}$ in fixed point) & exact \\
+Histogram / path counting~\cite{glowacz2015,martin2015} & $O(mKW)$ & certified bounds only \\
+\textsc{RRDP-Rank} (this work) & $O(mKW+mK\eps^{-2}p^{-1}\log\delta^{-1})$ & bounds $+$ unbiased $(1\pm\eps)$ estimate \\ \bottomrule
+\end{tabular}}
+\end{center}
+
+\paragraph{Numerics.} Costs are exact 64-bit integers. Counts reach about $K^m=2^{128}<2^{1024}$, so \texttt{float64}
+never overflows. Every DP operation adds non-negative terms, so the relative error of each count is
+at most about $(\#\text{additions})\cdot2^{-53}$, roughly $10^{-12}$ here. FFT convolution is deliberately avoided: its
+\emph{absolute} error relative to the largest entry would swamp the small counts near $t=0$.
+
+\paragraph{Measured cost} (NumPy, one CPU core, AES-128, $m=16$, $K=256$): the DP takes under $0.01$\,s for every
+$W\le16384$. The wall time is dominated by sampling, from $0.26$\,s ($W=16384$, $n\approx6.4\cdot10^3$) to $9.1$\,s ($W=64$,
+$n\approx2.1\cdot10^5$); see Table~\ref{tab:aes}.

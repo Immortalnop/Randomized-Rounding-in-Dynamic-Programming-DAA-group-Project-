@@ -1,0 +1,82 @@
+\section{Algorithm}\label{sec:algo}
+
+\subsection{Idea: round, count, correct}
+\begin{enumerate}[nosep]
+\item \textbf{Round} every cost to a grid of width $D\in\Z_{>0}$, giving small integers $r_j(v)$.
+\item \textbf{Count} exactly with a DP over the integer budget $t\in\{0,\dots,W-1\}$, $W\approx T/D$.
+      This yields the rounded counts $N(t)=|\{k:\rho(k)\le t\}|$, where $\rho(k)=\sum_j r_j(k_j)$.
+\item \textbf{Correct} the rounding bias. Sample keys uniformly from a rounded superset $S'$ by
+      tracing back through the DP, keep those with true cost $\le T$, and rescale.
+\end{enumerate}
+Step~2 alone answers RQ1 (a certified sandwich). Step~3 answers RQ2 (an unbiased estimate).
+The choice of rounding in step~1 answers RQ3.
+
+\subsection{Step 1: two rounding rules}
+\begin{align*}
+\textbf{floor:}\quad & r_j(v)=\floor{c_j(v)/D},\\
+\textbf{stochastic (shared shift):}\quad & \rt_j(v)=\floor{(c_j(v)+U_j)/D},\\
+& U_j\sim\mathrm{Unif}\{0,\dots,D-1\}\ \text{independent over } j.
+\end{align*}
+Writing $c=Dq+s$ with $0\le s<D$: floor always rounds down, while the stochastic rule rounds up
+with probability exactly $s/D$, so $\E[D\rt_j(v)]=c_j(v)$. Because each subkey uses one shared
+shift $U_j$, the stochastic rule is also \emph{monotone within a subkey}: candidate order is
+never inverted. This is dithering, in the sense of signal processing.
+
+\subsection{Step 2: exact DP on the rounded instance}
+For $j=m,\dots,1$ (suffix form, convenient for sampling):
+\begin{equation}\label{eq:dp}
+F_{m+1}(t)=\ind[t\ge0],\qquad F_j(t)=\sum_{v=1}^{K}F_{j+1}\big(t-r_j(v)\big),\qquad t=0,\dots,t_{\max}.
+\end{equation}
+Then $F_j(t)$ counts suffixes $(k_j,\dots,k_m)$ with $\sum_{i\ge j}r_i(k_i)\le t$, and $N(t)=F_1(t)$.
+Grouping candidates by rounded value (a histogram $h_j(b)=|\{v:r_j(v)=b\}|$) turns \eqref{eq:dp}
+into a convolution with at most $\min(K,t_{\max}+1)$ non-zero taps:
+$F_j=\sum_b h_j(b)\,\mathrm{shift}_b(F_{j+1})$.
+
+\paragraph{Certified sandwich.} With $t^\star=\floor{T/D}$:
+\[
+\textbf{floor: } N(t^\star-m)\le R\le N(t^\star),\qquad
+\textbf{stoch.: } \tilde N(t^\star-m)\le R\le \tilde N\big(\floor{(T+m(D-1))/D}\big).
+\]
+
+\subsection{Step 3: randomized correction}
+\paragraph{Exact uniform sampler.} To draw $k$ uniformly from $S(t_0)=\{k:\rho(k)\le t_0\}$, set $t\gets t_0$.
+For $j=1,\dots,m$, pick $k_j=v$ with probability $F_{j+1}(t-r_j(v))/F_j(t)$, then set $t\gets t-r_j(v)$.
+
+\paragraph{Estimator.} Draw $n$ samples from the proposal $S'=S(t_0)$, let $X$ be the number
+with $C(k)\le T$, and output $\hat R=|S'|\cdot X/n$.
+
+\begin{algorithm}[h]
+\caption{\textsc{RRDP-Rank}$(c,k^\star,D,\textit{mode},\eps,\delta,\eta)$}\label{alg:rrdp}
+\begin{algorithmic}[1]
+\State shift rows so that $\min_v c_j(v)=0$; \quad $T\gets C(k^\star)$; \quad $t^\star\gets\floor{T/D}$; \quad $t_{\mathrm{lo}}\gets t^\star-m$
+\If{\textit{mode} = floor}
+   \State $r\gets\floor{c/D}$; \quad $t_{\mathrm{up}}\gets t^\star$; \quad $t_0\gets t^\star$
+\Else
+   \State draw $U_j$; \quad $r\gets\floor{(c+U)/D}$; \quad $t_{\mathrm{up}}\gets\floor{(T+m(D-1))/D}$
+   \State $\tau\gets D\sqrt{m\ln(1/\eta)/2}$; \quad $t_0\gets\min(\floor{(T+\tau)/D},t_{\mathrm{up}})$
+\EndIf
+\State compute $F_1,\dots,F_{m+1}$ on $\{0,\dots,t_{\mathrm{up}}\}$ by \eqref{eq:dp}
+\State $L\gets\max(N(t_{\mathrm{lo}}),1)$; \quad $U\gets N(t_{\mathrm{up}})$ \Comment{certified bounds}
+\State $p_{\mathrm{lo}}\gets N(t_{\mathrm{lo}})/N(t_0)$; \quad
+       \textbf{if} floor \textbf{and} $Dm(m-1)\le T$ \textbf{then} $p_{\mathrm{lo}}\gets\max(p_{\mathrm{lo}},\frac1{m(K-1)+1})$
+\State $n\gets\ceil{3\ln(2/\delta)/(\eps^2p_{\mathrm{lo}})}$
+\State draw $k^{(1)},\dots,k^{(n)}$ uniformly from $S(t_0)$ with the sampler; \quad $X\gets\#\{i: C(k^{(i)})\le T\}$
+\State \Return $L,\ U,\ \hat R=N(t_0)\cdot X/n$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Choosing the grid}
+\begin{itemize}[nosep]
+\item \textbf{Worst-case (FPRAS) grid:} $D=\max(1,\floor{T/(m(m-1))})$, which gives $W=O(m^2)$. Lemma~\ref{lem:dyer} then guarantees acceptance
+      probability $p\ge1/(m(K-1)+1)$ \emph{a priori}.
+\item \textbf{Practical grid:} $D=\floor{T/W}$ for a memory budget $W$. The certified ratio $p_{\mathrm{lo}}$ is usually far larger
+      than the worst case (Sec.~\ref{sec:conclusion}).
+\end{itemize}
+
+\begin{remark}[Unifying view]
+Recurrence \eqref{eq:dp} is a DP over the $(+,\times)$ semiring. Over $(\max,+)$ with
+profits in place of costs, the same table on rounded values is the Ibarra--Kim knapsack
+FPTAS~\cite{ibarra1975}. For $K=2$, $c_j=(0,w_j)$ and $D=T/n^2$, Algorithm~\ref{alg:rrdp} \emph{is}
+Dyer's \#Knapsack algorithm~\cite{dyer2003}. \textsc{RRDP-Rank} extends it to multiple-choice
+constraints and adds stochastic input rounding.
+\end{remark}

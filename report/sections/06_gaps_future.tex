@@ -1,0 +1,36 @@
+\section{Gaps and Future Directions}\label{sec:future}
+
+\subsection{Gaps in this work}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Conservative sample size.} $n$ is set from the certified $p_{\mathrm{lo}}$, not from the true $p$. In
+      Table~\ref{tab:aes} at $W=64$ we have $p_{\mathrm{lo}}=0.03$ while the realised $p=R/N(t^\star)\approx2^{33.97-35.20}\approx0.43$, so about $14\times$ too many samples were drawn.
+\item \textbf{Weak certificate in stochastic mode.} Theorem~\ref{thm:stoch} still bounds $p'$ through the $m$-cell floor band.
+      Its sampling advantage is therefore only realised with adaptive stopping (item~1 below).
+\item \textbf{Worst-case constants.} Lemma~\ref{lem:dyer} gives $p\ge1/(m(K-1)+1)\approx1/4081$ for AES, which is far from the
+      observed $0.4$--$0.99$. The FPRAS bound is correct but pessimistic.
+\item \textbf{Independence assumption.} Additive scores assume independent subkey posteriors. Masked implementations,
+      multivariate or joint templates, and key-schedule leakage couple the subkeys.
+\item \textbf{Simulated leakage only.} The experiments use a Gaussian Hamming-weight model, not real traces or neural-network posteriors.
+\end{enumerate}
+
+\subsection{Future directions}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Adaptive sampling.} Replace the fixed $n$ by the Dagum--Karp--Luby--Ross stopping rule~\cite{dklr2000}: about
+      $O(\eps^{-2}p^{-1}\log\delta^{-1})$ samples in expectation using the \emph{true} $p$. This closes gaps~1 and~2.
+\item \textbf{Sharper rounding analysis.} Dyer refines the basic bound to $\tilde O(n^{2.5}+n^2\eps^{-2})$ and points to further gains
+      from randomized rounding~\cite{dyer2003}. Feng and Jin reach \emph{subquadratic} time for \#Knapsack within Dyer's framework,
+      working on a randomly rounded instance~\cite{feng2025}. Lifting these to the multiple-choice (key-rank) case is open.
+\item \textbf{Deterministic FPTAS for key rank.} Combine Lemma~\ref{lem:dyer} with approximate-count DPs over read-once branching
+      programs~\cite{gopalan2011,stefankovic2012} to remove randomness while keeping polynomial time.
+\item \textbf{Coupled subkeys.} Run the DP over a tree decomposition of the dependency graph between subkeys (for example,
+      second-order masking pairs). The cost becomes exponential only in the treewidth.
+\item \textbf{Sampling as enumeration.} The exact sampler over $S'$ gives a \emph{randomized key search} with a provable
+      success probability per guess. That suggests GPU-parallel, stateless enumeration in the spirit of~\cite{martin2015,poussier2016}.
+\item \textbf{Deep-learning SCA.} Plug calibrated network posteriors (ASCAD~\cite{benadjila2020}) into \textsc{RRDP-Rank}. An open question is
+      how model miscalibration compares with rounding error, and whether stochastic rounding acts as a regulariser.
+\item \textbf{Equality constraints.} Counting $\{x: a\cdot x=t\}$ (subset-sum preimages, relevant to the density of
+      Merkle--Hellman-type keys~\cite{merkle1978,lagarias1985}) defeats ratio-based estimation, because $|A|$ can be $0$. Finding rounding schemes with
+      guarantees for this case is open.
+\item \textbf{Leakage of the evaluator.} The DP and sampler are data-dependent. If run on-device, they should be
+      constant-time, or the rank estimator itself becomes a side channel.
+\end{enumerate}

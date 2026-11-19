@@ -1,0 +1,77 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{algorithm,algpseudocode}
+\usepackage{booktabs,graphicx,enumitem,xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=green!40!black,urlcolor=blue!50!black]{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{problem}{Problem}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\Pr}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\rt}{\tilde r}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+
+\title{\textbf{Randomized Rounding in Dynamic Programming}\\[2pt]
+\large Round, Count, Correct: an FPRAS for Side-Channel Key Rank\\
+\normalsize (Problem 9)}
+\author{Aarush Mohan Mathur \\ Roll No.\ 2410110391 \\ B.Tech CSE, Shiv Nadar Institution of Eminence}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Dynamic programming (DP) over numeric budgets costs time and memory proportional to the
+magnitude of the numbers, and that blows up quickly. Rounding the numbers to a coarse grid shrinks the DP, but it also biases the answer.
+We study \emph{randomized} rounding as the tool that removes this bias. The setting is a
+cryptographic one: estimating the \emph{rank} of a secret key after a side-channel attack,
+which is a \#P-hard multiple-choice knapsack counting problem. We give a three-step
+algorithm, \textsc{RRDP-Rank} (round $\to$ exact DP $\to$ randomized correction), and prove four things.
+(i)~The DP alone gives \emph{certified} lower and upper bounds.
+(ii)~DP-guided rejection sampling turns these into an \emph{unbiased} $(1\pm\eps)$ estimator.
+(iii)~A Dyer-type combinatorial bound makes the whole procedure a fully polynomial randomized
+approximation scheme (FPRAS) running in $O(m^3K + m^2K^2\eps^{-2}\log\delta^{-1})$ time.
+(iv)~Stochastic (unbiased) rounding of the inputs reduces the error band from $\Theta(mD)$ to $O(D\sqrt{m\log(1/\eta)})$.
+All claims are checked against brute force. On simulated AES-128 leakage, a 64-cell DP whose own certified
+bounds span 5 bits, combined with sampling, gives an estimate that lands inside the 0.02-bit certified band of a 16384-cell DP.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{sections/01_problem_statement}
+\input{sections/02_algorithm}
+\input{sections/03_proof}
+\input{sections/04_complexity}
+\input{sections/05_conclusion}
+\input{sections/06_gaps_future}
+
+\appendix
+\section{Reproducibility}
+All code is in \texttt{code/} (Python~3, NumPy, Matplotlib).
+\begin{itemize}[nosep]
+\item \texttt{python3 test\_rrdp.py}: checks the lemmas and theorems against brute force.
+\item \texttt{python3 experiment\_aes.py}: AES-128 experiment (Table~\ref{tab:aes}, Fig.~\ref{fig:aes}).
+\item \texttt{python3 experiment\_scaling\_m.py}: floor vs.\ stochastic rounding (Table~\ref{tab:scaling}).
+\end{itemize}
+Real scores are converted to exact \texttt{int64} fixed point (resolution $2^{-20}$ nats), so
+all cost comparisons are exact. Counts are \texttt{float64}. All terms are non-negative, so the
+relative error is at most about $mK\cdot2^{-53}$, and counts are exact below $2^{53}$.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

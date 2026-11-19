@@ -1,0 +1,83 @@
+\section{Problem Statement}\label{sec:problem}
+
+\subsection{Motivation}
+Many DPs are indexed by a numeric budget: knapsack capacity, accumulated cost, total
+log-likelihood. Their tables have $\Theta(n\cdot B)$ cells, where $B$ is the \emph{magnitude}
+of the budget, so they are only pseudo-polynomial. The standard fix is to \emph{round} the
+numbers to a grid of width $D$, which shrinks the table by a factor $D$. Deterministic rounding,
+however, introduces a \emph{systematic bias}: every rounded weight errs in the same direction,
+and the errors add up linearly.
+
+\emph{Randomized rounding}~\cite{raghavan1987} replaces a fractional value by a random
+integer with the correct expectation. It removes the bias and gives errors that concentrate
+like $\sqrt{n}$ rather than $n$. This report asks how the two ideas combine:
+\begin{quote}\itshape
+Can a DP on a randomly or coarsely rounded instance, followed by a randomized correction,
+give provably accurate answers at a fraction of the exact DP's cost?
+\end{quote}
+
+\subsection{Background: existing applications and guarantees}
+Table~\ref{tab:background} summarises where rounding and randomization already meet DP.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}p{3.3cm}p{3.6cm}p{3.4cm}p{4.4cm}@{}}
+\toprule
+Work & What is rounded & Role of randomness & Guarantee \\ \midrule
+Raghavan--Thompson~\cite{raghavan1987} & LP solution (fractional $\to$ 0/1) & independent coin per variable & $O(\log n/\log\log n)$-approx.\ for min-congestion routing (Chernoff) \\
+Ibarra--Kim~\cite{ibarra1975} & item profits (scaling) & none & knapsack FPTAS, $(1-\eps)$; textbook version $O(n^3/\eps)$ \\
+Dyer~\cite{dyer2003} & item weights to $[0,n^2]$ & rejection sampling from rounded DP & \#Knapsack FPRAS, $\tilde O(n^{2.5}+n^2\eps^{-2})$ \\
+Gopalan et al.~\cite{gopalan2011}, \v{S}tefankovi\v{c} et al.~\cite{stefankovic2012} & DP \emph{values} (counts) & none (derandomized) & deterministic \#Knapsack FPTAS, $\tilde O(n^3/\eps)$ \\
+Srinivasan; Gandhi et al.~\cite{srinivasan2001,gandhi2006} & LP on bipartite / level sets & dependent coins & sums preserved exactly, negative correlation \\
+Stochastic rounding~\cite{gupta2015,croci2022} & floating-point arithmetic & unbiased rounding & error $O(\sqrt{n})$ vs.\ $O(n)$ \\
+Key rank~\cite{veyrat2013,glowacz2015,martin2015} & subkey log-likelihoods & none & certified bounds via histogram convolution / path counting \\
+LWR~\cite{bpr2012} & $\langle a,s\rangle \bmod q$ to $\Z_p$ & none (rounding \emph{replaces} noise) & PRFs as hard as LWE \\ \bottomrule
+\end{tabular}
+\caption{Rounding $\times$ randomness $\times$ DP in the literature.}\label{tab:background}
+\end{table}
+
+\paragraph{Cryptographic tint.} Rounding plays two roles in cryptography. In LWR~\cite{bpr2012}
+rounding \emph{destroys} information, which is the source of hardness. Knapsack cryptosystems
+(Merkle--Hellman~\cite{merkle1978}, broken by Shamir~\cite{shamir1984} and by low-density lattice
+attacks~\cite{lagarias1985}) and subset-sum one-way functions~\cite{impagliazzo1996} live on the
+same combinatorics we count here. In side-channel evaluation, rounding is used \emph{by the
+evaluator} to make an otherwise infeasible count tractable. That last case is the setting of
+this report.
+
+\subsection{The concrete problem: key rank after a side-channel attack}
+A profiled side-channel attack, for example a template or deep-learning attack on
+ASCAD~\cite{benadjila2020}, outputs for each of $m$ subkeys (16 bytes for AES-128) a score for
+each of $K$ candidates (256). With independent per-byte posteriors, the negative
+log-posterior of a full key is additive.
+
+\begin{definition}[Key rank]
+Let $c\in\Z_{\ge0}^{m\times K}$ with $\min_v c_j(v)=0$ for every $j$ (shifting a row changes nothing).
+For $k\in[K]^m$ let $C(k)=\sum_{j=1}^m c_j(k_j)$. Given the true key $k^\star$ and
+$T=C(k^\star)$, the rank is
+\[ R \;=\; |A|,\qquad A=\{k\in[K]^m : C(k)\le T\}. \]
+\end{definition}
+$\log_2 R$ is the evaluator's measure of the residual brute-force effort. With $K^m=2^{128}$,
+enumeration is impossible.
+
+\begin{proposition}[Hardness]\label{prop:hard}
+Computing $R$ exactly is \#P-hard.
+\end{proposition}
+\begin{proof}
+Reduce from \#Knapsack ($w\in\Z_{>0}^n$, capacity $L$; count $x\in\{0,1\}^n$ with $w\cdot x\le L$),
+which is \#P-complete. Take $m=n+1$ and $K=2$, with $c_j=(0,w_j)$ for $j\le n$, $c_{n+1}=(0,L)$, and
+$k^\star=(0,\dots,0,1)$, so $T=L$. Keys with $k_{n+1}=0$ contribute $\#\{x: w\cdot x\le L\}$.
+Keys with $k_{n+1}=1$ need $w\cdot x\le 0$, which only $x=0$ satisfies. Hence $R=\#\text{Knapsack}+1$.
+\end{proof}
+
+\begin{problem}[Approximate rank]\label{prob:main}
+Given $c$, $k^\star$, $\eps\in(0,1)$ and $\delta\in(0,1)$, output
+\begin{enumerate}[nosep]
+\item certified bounds $L\le R\le U$, and
+\item an estimate $\hat R$ with $\Pr[(1-\eps)R\le\hat R\le(1+\eps)R]\ge1-\delta$,
+\end{enumerate}
+in time polynomial in $m$, $K$, $1/\eps$ and $\log(1/\delta)$, \emph{independent of the magnitude of $c$}.
+\end{problem}
+
+\paragraph{Research questions.}
+\textbf{RQ1}: what exactly does rounding plus DP guarantee by itself?
+\textbf{RQ2}: can randomization remove the rounding bias \emph{exactly} (unbiasedly)?
+\textbf{RQ3}: when does randomized rounding of the \emph{inputs} beat deterministic rounding?
