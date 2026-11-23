@@ -70,7 +70,7 @@ def test_sampler_uniform():
 
 
 def test_estimator_floor():
-    """Theorem 2: unbiased; |R_hat/R - 1| <= eps w.p. >= 1 - delta."""
+    """Theorem 1: unbiased; |R_hat/R - 1| <= eps w.p. >= 1 - delta."""
     c, key = rand_instance(4, 16)
     R, _ = brute(c, key)
     D, eps, delta, trials = 400, 0.1, 0.1, 300
@@ -85,7 +85,7 @@ def test_estimator_floor():
 
 
 def test_stoch_rounding():
-    """Lemma 3: E[D r~] = c (unbiased) and Hoeffding tail for a fixed key."""
+    """Lemma 6: E[D r~] = c (unbiased) and Hoeffding tail for a fixed key."""
     m, K, D, eta = 16, 4, 1000, 0.05
     c = rng.integers(0, 10**6, size=(m, K)).astype(np.int64)
     key = rng.integers(0, K, m)
@@ -105,7 +105,7 @@ def test_stoch_rounding():
 
 
 def test_estimator_stoch():
-    """Theorem 3: (1-eps)(1-eta/delta1) R <= R_hat <= (1+eps) R w.p. >= 1-delta1-delta2."""
+    """Theorem 2: (1-eps)(1-eta/delta1) R <= R_hat <= (1+eps) R w.p. >= 1-delta1-delta2."""
     c, key = rand_instance(4, 16)
     R, _ = brute(c, key)
     D, eps, d2, eta, d1, trials = 400, 0.1, 0.1, 0.01, 0.1, 300
