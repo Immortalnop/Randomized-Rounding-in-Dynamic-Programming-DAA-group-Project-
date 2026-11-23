@@ -3,3 +3,10 @@ __pycache__/
 .vscode/
 .DS_Store
 .DS_Store
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.loa
