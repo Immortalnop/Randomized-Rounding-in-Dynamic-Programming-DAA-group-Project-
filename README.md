@@ -1,7 +1,12 @@
 # Problem 9: Randomized Rounding in Dynamic Programming
 
 **Round, Count, Correct: an FPRAS for side-channel key rank**
-Aarush Mohan Mathur (2410110391)
+Team Members:
+- Aarush Mohan Mathur (2410110391)
+- Ojasw Kant (2410110226)
+- Breeti Bandyopadhyay (2410110105)
+- Ishaan Prakash (2410110429)
+- Shaurya Ajit Singh (2410110318)
 
 This project looks at what you get by combining **rounding**, **dynamic programming** and **randomization**, using one concrete, #P-hard problem: estimating the **key rank** after a side-channel attack. The result is **RRDP-Rank**, an algorithm that:
 
